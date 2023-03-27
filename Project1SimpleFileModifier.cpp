@@ -23,71 +23,57 @@ void Project1SimpleFileModifier::modifyAndCopyFile(const char* sourceFile, const
         throw FileModifyException("Error creating destination file.");
     }
 
-    // Modify first entry
-    EntryInfo entry;
-    ssize_t bytesRead = read(sourceFd, &entry, sizeof(EntryInfo));
-    if (bytesRead == -1) {
-        close(sourceFd);
-        close(destFd);
-        throw FileModifyException("Error reading input file.");
-    }
-    if (bytesRead < sizeof(EntryInfo)) {
-        close(sourceFd);
-        close(destFd);
-        throw FileModifyException("Input file too short.");
-    }
-    entry.price = 1000000;
-    entry.weight = 2.25;
-    strncpy(entry.itemName, "CS 3377", sizeof(entry.itemName));
-
-    // Write
-    ssize_t bytesWritten = write(destFd, &entry, sizeof(EntryInfo));
-    if (bytesWritten == -1 || bytesWritten < sizeof(EntryInfo)) {
-        close(sourceFd);
-        close(destFd);
-        throw FileModifyException("Error writing to output file.");
-    }
-
     // Copying entries
-    char buffer[BUFSIZ];
-    while ((bytesRead = read(sourceFd, buffer, BUFSIZ)) > 0) {
-        bytesWritten = write(destFd, buffer, bytesRead);
-        if (bytesWritten == -1 || bytesWritten < bytesRead) {
+    EntryInfo entry;
+    ssize_t bytesRead;
+    int entryCount = 0;
+    while ((bytesRead = read(sourceFd, &entry, sizeof(EntryInfo))) > 0) {
+        // Update the first entry with the specified changes
+        if (entryCount == 0) {
+            entry.price = 1000000;
+            entry.weight = 2.25;
+            strncpy(entry.itemName, "CS 3377", sizeof(entry.itemName));
+        }
+
+        // Write each entry to the destination file
+        ssize_t bytesWritten = write(destFd, &entry, sizeof(EntryInfo));
+        if (bytesWritten == -1 || bytesWritten < sizeof(EntryInfo)) {
             close(sourceFd);
             close(destFd);
             throw FileModifyException("Error writing to output file.");
         }
+        entryCount++;
     }
-
-    // Addin
     EntryInfo newEntry = {
             .itemID = 6530927,
             .quantity = 77,
             .price = 89.99,
             .weight = 3.0
     };
-    strncpy(newEntry.itemName, "Advanced Programming in the UNIX Environment by Stevens and Rago",
-            sizeof(newEntry.itemName));
-    bytesWritten = write(destFd, &newEntry, sizeof(EntryInfo));
+    strncpy(newEntry.itemName, "Advanced Programming in the UNIX Environment by Stevens and Rago", sizeof(newEntry.itemName));
+
+    ssize_t bytesWritten = write(destFd, &newEntry, sizeof(EntryInfo));
     if (bytesWritten == -1 || bytesWritten < sizeof(EntryInfo)) {
         close(sourceFd);
         close(destFd);
         throw FileModifyException("Error writing to output file.");
     }
 
-    // Closing
+    // Close both files
     close(sourceFd);
     close(destFd);
 
-    // Printing edited entries
+    // Print edited entries
     std::cout << "Modified entries:\n";
-    sourceFd = open(destFile, O_RDONLY);
-    if (sourceFd == -1) {
+    destFd = open(destFile, O_RDONLY);
+    if (destFd == -1) {
         throw FileModifyException("Error opening destination file.");
     }
-    while (read(sourceFd, &entry, sizeof(EntryInfo)) > 0) {
+    entryCount = 0;
+    while (read(destFd, &entry, sizeof(EntryInfo)) > 0) {
         std::cout << "Item ID: " << entry.itemID << ", Name: " << entry.itemName << ", Quantity: " << entry.quantity
                   << ", Price: " << entry.price << ", Weight: " << entry.weight << "\n";
+        entryCount++;
     }
-
+    std::cout << "Total number of entries: " << entryCount << std::endl;
 }
