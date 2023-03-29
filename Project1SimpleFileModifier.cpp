@@ -21,119 +21,88 @@ void Project1SimpleFileModifier::modifyAndCopyFile(const char* sourceFile, const
         throw FileModifyException("Error creating destination file.");
     }
 
-    // Copying entries
+    // Read header from source file
+    int header;
+    int bytesRead = read(sourceFd, &header, sizeof(int));
+    if (bytesRead != sizeof(int)) {
+        close(sourceFd);
+        close(destFd);
+        throw FileModifyException("Error reading header from source file.");
+    }
+    std::cout << "Header of source file: " << header << std::endl;
+    int newHeader = header + 1;
 
+    // Write header to destination file
+    int bytesWritten = write(destFd, &newHeader, sizeof(int));
+    if (bytesWritten != sizeof(int)) {
+        close(sourceFd);
+        close(destFd);
+        throw FileModifyException("Error writing header to destination file.");
+    }
+    std::cout << "Header of destination file: " << newHeader << std::endl;
 
+    // Read the first entry from source file
+    EntryInfo firstEntry;
+    bytesRead = read(sourceFd, &firstEntry, sizeof(EntryInfo));
+    if (bytesRead != sizeof(EntryInfo)) {
+        close(sourceFd);
+        close(destFd);
+        throw FileModifyException("Error reading first entry from source file.");
+    }
+
+    // Modify the first entry
+    firstEntry.price = 1000000;
+    firstEntry.weight = 2.25;
+    strncpy(firstEntry.itemName, "CS 3377", 50);
+
+    // Write the modified first entry to destination file
+    if (write(destFd, &firstEntry, sizeof(EntryInfo)) != sizeof(EntryInfo)) {
+        close(sourceFd);
+        close(destFd);
+        throw FileModifyException("Error writing first entry to destination file.");
+    }
+
+    // Copy the rest of the entries from source file to destination file
     EntryInfo entry;
-
-
-    ssize_t bytesRead;
-    int entryCount = 0;
-    bool firstEntryModified = false;
-
-
-    while ((bytesRead = read(sourceFd, &entry, sizeof(entry))) > 0) {
-
-        // Update the first entry with the specified changes
-
-
-
-
-        if (entryCount == 0) {
-
-            std::cout << "first entry item ID: " << entry.itemID << std::endl;
-            EntryInfo modifiedEntry = {
-
-
-
-
-                    .price = 1000000,
-                    .weight = 2.25
-            };
-            strncpy(modifiedEntry.itemName, "CS 3377", sizeof(modifiedEntry.itemName) - 1);
-
-
-            entry = modifiedEntry;
-            firstEntryModified = true;
-
-
-
-        }
-
-
-
-
-
-        // Write each entry to the destination file
-        int oldID = entry.itemID;
-        entry.itemID = oldID;
-        ssize_t bytesWritten = write(destFd, &entry, sizeof(entry));
-        if (bytesWritten == -1 || bytesWritten < sizeof(entry)) {
+    while ((bytesRead = read(sourceFd, &entry, sizeof(EntryInfo))) > 0) {
+        if (write(destFd, &entry, bytesRead) != bytesRead) {
             close(sourceFd);
             close(destFd);
-            throw FileModifyException("Error writing to output file.");
-        }
-        entryCount++;
-    }
-
-
-    // Add the new entry to the end of the file if the first entry has been modified
-    // Add the new entry to the end of the file if the first entry has been modified
-    if (firstEntryModified) {
-        EntryInfo newEntry = {
-                .itemID = 6530927,
-                .quantity = 77,
-                .price = 89.99,
-                .weight = 3.0
-        };
-        strncpy(newEntry.itemName, "Advanced Programming in the UNIX Environment by Stevens and Rago", sizeof(newEntry.itemName) - 1);
-
-        // Write the new entry to the destination file
-        ssize_t bytesWritten = write(destFd, &newEntry, sizeof(newEntry));
-        if (bytesWritten == -1 || bytesWritten < sizeof(newEntry)) {
-            close(sourceFd);
-            close(destFd);
-            throw FileModifyException("Error writing to output file.");
-        }
-
-        // Update the header with the new entry count
-        int headerSize = sizeof(entryCount);
-        int64_t fileSize = lseek(destFd, 0, SEEK_END);
-        if (fileSize == -1) {
-            close(sourceFd);
-            close(destFd);
-            throw FileModifyException("Error seeking to end of output file.");
-        }
-        lseek(destFd, 0, SEEK_SET);
-
-        // Update the entry count to include the new entry
-        entryCount++;
-
-        bytesWritten = write(destFd, &entryCount, headerSize);
-        if (bytesWritten == -1 || bytesWritten < headerSize) {
-            close(sourceFd);
-            close(destFd);
-            throw FileModifyException("Error writing header to output file.");
+            throw FileModifyException("Error writing to destination file.");
         }
     }
+    if (bytesRead < 0) {
+        close(sourceFd);
+        close(destFd);
+        throw FileModifyException("Error reading from source file.");
+    }
 
+    // Add a new entry at the end of destination file
+    EntryInfo newEntry;
+    newEntry.itemID = 6530927;
+    strncpy(newEntry.itemName, "Advanced Programming in the UNIX Environment by Stevens and Rago", 49);
+    newEntry.quantity = 77;
+    newEntry.price = 8999;
+    newEntry.weight = 3.0;
 
-    // Close both files
+    // Write the new entry to destination file
+    if (write(destFd, &newEntry, sizeof(EntryInfo)) != sizeof(EntryInfo)) {
+        close(sourceFd);
+        close(destFd);
+        throw FileModifyException("Error writing new entry to destination file.");
+    }
+
+    // Close files
     close(sourceFd);
     close(destFd);
-
-    // Print edited entries
-    destFd = open(destFile, O_RDONLY);
-    if (destFd == -1) {
-        throw FileModifyException("Error opening destination file.");
-    }
-    entryCount = 0;
-    while (read(destFd, &entry, sizeof(EntryInfo)) > 0) {
-        std::cout << "Item ID: " << entry.itemID << ", Name: " << entry.itemName << ", Quantity: " << entry.quantity
-                  << ", Price: " << entry.price << ", Weight: " << entry.weight << "\n";
-        entryCount++;
-    }
-    std::cout << "Total number of entries: " << entryCount << std::endl;
-
-    close(destFd);
 }
+
+
+    // Write the entry to destination file
+
+
+
+
+
+
+
